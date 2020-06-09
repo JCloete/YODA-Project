@@ -4,7 +4,7 @@
 # http://brandon.sternefamily.net/files/mit-license.txt
 # Python AES implementation
 
-import sys, hashlib, string, getpass
+import sys, string
 from copy import copy
 from random import randint
 
@@ -95,6 +95,7 @@ def keyScheduleCore(word, i):
     newWord = []
     # apply sbox substitution on all bytes of word
     for byte in word:
+        print(byte)
         newWord.append(sbox[byte])
     # XOR the output of the rcon[i] transformation with the first part of the word
     newWord[0] = newWord[0]^rcon[i]
@@ -104,7 +105,7 @@ def keyScheduleCore(word, i):
 # each round key is derived
 def expandKey(cipherKey):
     cipherKeySize = len(cipherKey)
-    assert cipherKeySize == 32
+    assert cipherKeySize == 16
     # container for expanded key
     expandedKey = []
     currentSize = 0
@@ -158,9 +159,6 @@ def subBytesInv(state):
 # XOR each byte of the roundKey with the state table
 def addRoundKey(state, roundKey):
     for i in range(len(state)):
-        #print i
-        #print "old state value:", state[i]
-        #print "new state value:", state[i] ^ roundKey[i]
         state[i] = state[i] ^ roundKey[i]
 
 # Galois Multiplication
@@ -235,27 +233,18 @@ def mixColumnsInv(state):
 
 # aesRound applies each of the four transformations in order
 def aesRound(state, roundKey):
-    #print "aesRound - before subBytes:", state
     subBytes(state)
-    #print "aesRound - before shiftRows:", state
     shiftRows(state)
-    #print "aesRound - before mixColumns:", state
     mixColumns(state)
-    #print "aesRound - before addRoundKey:", state
     addRoundKey(state, roundKey)
-    #print "aesRound - after addRoundKey:", state
+
 
 # aesRoundInv applies each of the four inverse transformations
 def aesRoundInv(state, roundKey):
-    #print "aesRoundInv - before addRoundKey:", state
     addRoundKey(state, roundKey)
-    #print "aesRoundInv - before mixColumnsInv:", state
     mixColumnsInv(state)
-    #print "aesRoundInv - before shiftRowsInv:", state
     shiftRowsInv(state)
-    #print "aesRoundInv - before subBytesInv:", state
     subBytesInv(state)
-    #print "aesRoundInv - after subBytesInv:", state
 
 
 # returns a 16-byte round key based on an expanded key and round number
@@ -263,14 +252,6 @@ def createRoundKey(expandedKey, n):
     return expandedKey[(n*16):(n*16+16)]
 
 # create a key from a user-supplied password using SHA-256
-def passwordToKey(password):
-    sha256 = hashlib.sha256()
-    sha256.update(password)
-    key = []
-    for c in list(sha256.digest()):
-        key.append(ord(c))
-    return key
-
 # wrapper function for 14 rounds of AES since we're using a 256-bit key
 def aesMain(state, expandedKey, numRounds=14):
     roundKey = createRoundKey(expandedKey, 0)
@@ -285,7 +266,7 @@ def aesMain(state, expandedKey, numRounds=14):
     addRoundKey(state, roundKey)
 
 # 14 rounds of AES inverse since we're using a 256-bit key
-def aesMainInv(state, expandedKey, numRounds=14):
+def aesMainInv(state, expandedKey, numRounds=10):
     # create roundKey for "last" round since we're going in reverse
     roundKey = createRoundKey(expandedKey, numRounds)
     # addRoundKey is the same funtion for inverse since it uses XOR
@@ -313,230 +294,15 @@ def aesDecrypt(ciphertext, key):
     aesMainInv(block, expandedKey)
     return block
 
-# return 16-byte block from an open file
-# pad to 16 bytes with null chars if needed
-def getBlock(fp):
-    raw = fp.read(16)
-    # reached end of file
-    if len(raw) == 0:
-        return ""
-    # container for list of bytes
-    block = []
-    for c in list(raw):
-        block.append(ord(c))
-    # if the block is less than 16 bytes, pad the block
-    # with the string representing the number of missing bytes
-    if len(block) < 16:
-        padChar = 16-len(block)
-        while len(block) < 16:
-            block.append(padChar)
-    return block
-
-# encrypt - wrapper function to allow encryption of arbitray length
-# plaintext using Output Feedback (OFB) mode
-def encrypt(myInput, password, outputfile=None):
-    block = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] # plaintext
-    ciphertext = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] # ciphertext
-    # Initialization Vector
-    IV = []
-    for i in range(16):
-        IV.append(randint(0, 255))
-
-    # convert password to AES 256-bit key
-    aesKey = passwordToKey(password)
-
-    # create handle for file to be encrypted
-    try:
-        fp = open(myInput, "rb")
-    except:
-        print "pyAES: unable to open input file -", myInput
-        sys.exit()
-
-    # create handle for encrypted output file
-    if outputfile is not None:
-        try:
-            outfile = open(outputfile,"w")
-        except:
-            print "pyAES: unable to open output file -", outputfile
-            sys.exit()
-    else:
-        filename = myInput+".aes"
-        try:
-            outfile = open(filename,"w")
-        except:
-            print "pyAES: unable to open output file -", filename
-            sys.exit()
-
-    # write IV to outfile
-    for byte in IV:
-        outfile.write(chr(byte))
-
-    # get the file size (bytes) 
-    # if the file size is a multiple of the block size, we'll need 
-    # to add a block of padding at the end of the message
-    fp.seek(0,2)
-    filesize = fp.tell()
-    # put the file pointer back at the beginning of the file
-    fp.seek(0)
-
-    # begin reading in blocks of input to encrypt
-    firstRound = True
-    block = getBlock(fp)
-    while block != "":
-        if firstRound:
-            blockKey = aesEncrypt(IV, aesKey)
-            firstRound = False
-        else:
-            blockKey = aesEncrypt(blockKey, aesKey)
-
-        for i in range(16):
-            ciphertext[i] = block[i] ^ blockKey[i]
-
-        # write ciphertext to outfile
-        for c in ciphertext:
-            outfile.write(chr(c))
-
-        # grab next block from input file
-        block = getBlock(fp)
-    # if the message ends on a block boundary, we need to add an
-    # extra block of padding
-    if filesize % 16 == 0:
-        outfile.write(16*chr(16))
-    # close file pointers
-    fp.close()
-    outfile.close()
-
-# decrypt - wrapper function to allow decryption of arbitray length
-# ciphertext using Output Feedback (OFB) mode
-def decrypt(myInput, password, outputfile=None):
-    block = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] # ciphertext
-    plaintext = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] # plaintext container
-
-    # convert password to AES 256-bit key
-    aesKey = passwordToKey(password)
-
-    # create handle for file to be encrypted
-    try:
-        fp = open(myInput, "rb")
-    except:
-        print "pyAES: unable to open input file -", myInput
-        sys.exit()
-
-    # create handle for file to be decrypted
-    try:
-        fp = open(myInput, "rb")
-    except:
-        print "pyAES: unable to open input file -", myInput
-        sys.exit()
-
-    # create handle for decrypted output file
-    if outputfile is not None:
-        try:
-            outfile = open(outputfile,"w")
-        except:
-            print "pyAES: unable to open output file -", filename
-            sys.exit()
-    else:
-        if myInput[-4:] == ".aes":
-            filename = myInput[:-4]
-            print "Using", filename, "for output file name."
-        else:
-            filename = raw_input("output file name: ")
-        try:
-            outfile = open(filename,"w")
-        except:
-            print "pyAES: unable to open output file -", filename
-            sys.exit()
-
-    # recover Initialization Vector, the first block in file
-    IV = getBlock(fp)
-
-    # get the file size (bytes) in order to handle the
-    # padding at the end of the file
-    fp.seek(0,2)
-    filesize = fp.tell()
-    # put the file pointer back at the first block of ciphertext
-    fp.seek(16)
-
-    # begin reading in blocks of input to decrypt
-    firstRound = True
-    block = getBlock(fp)
-    while block != "":
-        if firstRound:
-            blockKey = aesEncrypt(IV, aesKey)
-            firstRound = False
-        else:
-            blockKey = aesEncrypt(blockKey, aesKey)
-
-        for i in range(16):
-            plaintext[i] = block[i] ^ blockKey[i]
-
-        # if we're in the last block of text -> throw out the
-        # number of bytes represented by the last byte in the block
-        if fp.tell() == filesize:
-            plaintext = plaintext[0:-(plaintext[-1])]
-
-        # write ciphertext to outfile
-        for c in plaintext:
-            outfile.write(chr(c))
-
-        # grab next block from input file
-        block = getBlock(fp)
-    # close file pointers
-    fp.close()
-    outfile.close()
-
-def printUsage():
-    print "./pyAES.py [-e <input file> | -d <input file>] [(optional) -o <output file>]"
-    print "You will be prompted for a password after you specify the encryption/decryption args.\n"
-    sys.exit()
 
 # gather command line arguments and validate input
 def main():
-    # containers for command line arguments
-    inputfile = None
-    outputfile = None
-
-    for a in range(len(sys.argv)):
-        if sys.argv[a] == "-e":
-            try:
-                inputfile = sys.argv[a+1]
-            except:
-                inputfile = raw_input("File to encrypt: ")
-        elif sys.argv[a] == "-d":
-            try:
-                inputfile = sys.argv[a+1]
-            except:
-                inputfile = raw_input("File to decrypt: ")
-        if sys.argv[a] == "-o":
-            try:
-                outputfile = sys.argv[a+1]
-            except:
-                pass
-    # print help message
-    if ("-h" in sys.argv) or ("--help" in sys.argv):
-        printUsage()
-    if inputfile is None:
-        print "Error: please specify options for encryption or decryption."
-        printUsage()
-    # encrypt file per user instructions
-    if "-e" in sys.argv:
-        password = getpass.getpass("Password: ")
-        print "Encrypting file:", inputfile
-        if outputfile is not None:
-            encrypt(inputfile, password, outputfile)
-        else:
-            encrypt(inputfile, password)
-        print "Encryption complete."
-    # decrypt file per user instructions
-    elif "-d" in sys.argv:
-        password = getpass.getpass("Password: ")
-        print "Decrypting file:", inputfile
-        if outputfile is not None:
-            decrypt(inputfile, password, outputfile)
-        else:
-            decrypt(inputfile, password)
-        print "Decryption complete."
+    text = "Discombobulate"
+    key = "qqqqwwwweeeerrrr"
+    h = aesEncrypt(text, key)
+    print(h)
+    d = aesDecrypt(h, key)
+    print(d)
 
 if __name__ == "__main__":
     main()

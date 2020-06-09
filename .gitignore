@@ -4,3 +4,6 @@
 
 # Directories Ignore Example
 # Prac4/Prac4.cache/
+src/in
+src/out
+src/key
