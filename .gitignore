@@ -2,8 +2,15 @@
 # Files Ignore Example
 # Prac4/Prac4.xpr
 
+YODA-Project.xpr
+
 # Directories Ignore Example
 # Prac4/Prac4.cache/
 src/in
 src/out
 src/key
+
+YODA-Project.cache/
+YODA-Project.hw/
+YODA-Project.ip_user_files/
+YODA-Project.sim/
