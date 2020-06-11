@@ -1,7 +1,7 @@
 module sbox(
     input inv,
     input [7:0] value,
-    output reg swap
+    output reg [7:0] swap
 );
 
 always @(*)

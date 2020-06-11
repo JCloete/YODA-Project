@@ -18,3 +18,4 @@ bin/testbench
 testbench.v
 testbench.v.out
 Makefile
+sbox.v.out
