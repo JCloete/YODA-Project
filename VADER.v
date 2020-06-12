@@ -9,8 +9,8 @@ module VADER(
     input clk, //100 MHz clock. 
     input reset, // Reset button
     input start, // Start button
-    input btnR, //Left button
-    input btnL, //Right button
+    //input btnR, //Left button
+    //input btnL, //Right button
     //output wire [7:0]seg, //Seg display, to be linked with state (active low)
     //output wire [7:0]segdriv, //Seg driv (active low)
     //output wire [2:0]led, //RGB led (to be linked state in HW)
