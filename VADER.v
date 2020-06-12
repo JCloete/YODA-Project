@@ -18,14 +18,14 @@ module VADER(
     );
     
     //Internal variables
-    wire resState;
+    wire resState;	// Resets our system to the beginning
     Delayed_Res resetter(clk, reset, resState);
-    wire startState;
+    wire startState; // Starts our system once resetted
     Debounce(clk, start, startState);
     
     // Memory IO
-    reg ena = 1;
-    reg wea = 0;
+    reg ena = 1; // Enable reading memory
+    reg wea = 0; // Not current writing anything
     reg [7:0] addra=0;
     reg [10:0] dina=0; //We're not putting data in, so we can leave this unassigned
     //To-do: Alternate dina for BLOCK where we want to write data in
@@ -43,8 +43,8 @@ module VADER(
     );
     
     // Flags to set
-    reg dictionary;
-    reg brute;
+    reg dictionary; // Flag Used for transition to a dictionary attack state
+    reg brute; //  Flag to transition to a brute force attack state
     
     // Store hashed password
     reg [127:0] hPass;
@@ -53,7 +53,7 @@ module VADER(
     reg [31:0] bruteCounter;
     
     initial begin
-        // Set all flags
+        // Set all flags to 0
         dictionary <= 0;
         brute <= 0;
         bruteCounter <= 0;
@@ -63,11 +63,12 @@ module VADER(
     end
     
     always @(posedge startState) begin
-        if (state == 0) begin
+        if (state == 0) begin // So we cant go back to dictionary mid cracking attempt
             dictionary = 1; // Ensure that can only start once reset to wait state
         end
     end
     
+	// Resetting the system back to the beginning to allow for a different password to be guessed
     always @(posedge resState) begin
         dictionary <= 0;
         brute <= 0;
@@ -92,10 +93,10 @@ module VADER(
     // Check for ending conditions
     always @(state) begin
         if (state == 3) begin
-            // Do Success state stuff
+            // Do Success state stuff. i.e Flash Green LED
         end
         else if (state == 4) begin
-            // Do Failure state stuff
+            // Do Failure state stuff. i.e Flash Red LED
         end
     end
     
@@ -122,7 +123,7 @@ module VADER(
     
     // Stop after a number of attempts have been made
     always @(bruteCounter) begin
-        if (bruteCounter >= `bruteAttempts) begin
+        if (bruteCounter >= `bruteAttempts) begin // Give up on brute force once a certain amount of tries have elapsed.
             brute = 0;
             state = 4;
         end
@@ -130,7 +131,7 @@ module VADER(
     
     // Stop once end of dictionary has been reached
     always @(addra) begin
-        if (addra - `dictionaryStart >= `dictionarySize) begin
+        if (addra - `dictionaryStart >= `dictionarySize) begin // Give up on dictionary once all passwords have been attempted.
             dictionary = 0;
             brute = 1;
         end
