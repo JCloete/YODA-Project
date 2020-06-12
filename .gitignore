@@ -14,3 +14,8 @@ YODA-Project.cache/
 YODA-Project.hw/
 YODA-Project.ip_user_files/
 YODA-Project.sim/
+bin/testbench
+testbench.v
+testbench.v.out
+Makefile
+sbox.v.out
