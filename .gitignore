@@ -19,3 +19,5 @@ testbench.v
 testbench.v.out
 Makefile
 sbox.v.out
+test.py
+mut.v

@@ -18,6 +18,8 @@
     endfunction
     
     function subBytes();
+    // Use the sbox module to get the values out and easily collected
+    //  The initialisation is: sbox name(inversion?, location, output)
         input[7:0] state[15:0];
         input inv;
         reg[7:0] i = 0;
@@ -34,7 +36,7 @@
         end
     endfunction
     
-    function [7:0]rotate ();
+    function [7:0]rotate (); // A simple bit shifter to the left right
         input[7:0] element;
         input[3:0] i;
         reg [15:0] tmp;
@@ -44,20 +46,38 @@
         end
     endfunction
         
-    function shiftRows;
-        input[7:0] state[15:0];
+    function shiftRow;
         input inv;
-        reg[3:0] i = 0;
+        integer f,j,t;
+        integer c;
         begin
-            if (i < 4) begin
-                if (inv) begin
-                    //state[i*4:i*4+4] = rotate(state[i*4:i*4+4],-i); Verilog doesn't like this
+            c = 1;
+            for (f = 0; f < 4; f = f + 1)
+                begin
+                    if (inv == 1) begin
+                        while (c < f) begin
+                            t = arr[f*4];
+                            arr[(f*4) + 0] = arr[(f*4) + 1];
+                            arr[(f*4) + 1] = arr[(f*4) + 2];
+                            arr[(f*4) + 2] = arr[(f*4) + 3];
+                            arr[(f*4) + 3] = t;
+                            c = c + 1;
+                        end
+                        c = 0;
+                    end else begin
+                        for (j = 0;j < 3 ;j = j + 1 ) begin
+                            while (c < f) begin
+                            t = arr[f*4];
+                            arr[(f*4) + 0] = arr[(f*4) + 1];
+                            arr[(f*4) + 1] = arr[(f*4) + 2];
+                            arr[(f*4) + 2] = arr[(f*4) + 3];
+                            arr[(f*4) + 3] = t;
+                            c = c + 1;
+                        end
+                        c = 0;
+                        end
+                    end
                 end
-                else begin
-                    //state[i*4:i*4+4] = rotate(state[i*4:i*4+4],i); //Or this
-                end
-                i = i + 1;
-            end
         end
     endfunction
     
