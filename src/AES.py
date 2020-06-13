@@ -104,6 +104,8 @@ def keyScheduleCore(word, i):
 # expand 256 bit cipher key into 240 byte key from which
 # each round key is derived
 def expandKey(cipherKey):
+    if 1 == 1:
+        return cipherKey
     cipherKeySize = len(cipherKey)
     assert cipherKeySize == 16
     # container for expanded key
@@ -158,8 +160,9 @@ def subBytesInv(state):
 
 # XOR each byte of the roundKey with the state table
 def addRoundKey(state, roundKey):
-    for i in range(len(state)):
-        state[i] = state[i] ^ roundKey[i]
+    for i in range(0,len(state)):
+        a = state[i] ^ roundKey[i]
+        state[i] = a
 
 # Galois Multiplication
 def galoisMult(a, b):
@@ -249,11 +252,11 @@ def aesRoundInv(state, roundKey):
 
 # returns a 16-byte round key based on an expanded key and round number
 def createRoundKey(expandedKey, n):
-    return expandedKey[(n*16):(n*16+16)]
+    return expandedKey
 
 # create a key from a user-supplied password using SHA-256
 # wrapper function for 14 rounds of AES since we're using a 256-bit key
-def aesMain(state, expandedKey, numRounds=14):
+def aesMain(state, expandedKey, numRounds=10):
     roundKey = createRoundKey(expandedKey, 0)
     addRoundKey(state, roundKey)
     for i in range(1, numRounds):
@@ -294,15 +297,30 @@ def aesDecrypt(ciphertext, key):
     aesMainInv(block, expandedKey)
     return block
 
+def repl(state):
+    out = []
+    for i in range(0,len(state)):
+        out.append(ord(state[i]))
+    while (len(out) < 16):
+        out.append(ord(' '))
+    return out
 
+def remake(arr):
+    out = ""
+    for i in arr:
+        out += chr(i)
+    return out
+    
 # gather command line arguments and validate input
 def main():
     text = "Discombobulate"
-    key = "qqqqwwwweeeerrrr"
+    key = "qqqqwwwweeeerrty"
+    text = repl(text)
+    key = repl(key)
     h = aesEncrypt(text, key)
-    print(h)
+    print(remake(h))
     d = aesDecrypt(h, key)
-    print(d)
+    print(remake(d))
 
 if __name__ == "__main__":
     main()
