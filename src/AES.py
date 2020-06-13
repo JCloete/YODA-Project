@@ -315,12 +315,16 @@ def remake(arr):
 def main():
     text = "Discombobulate"
     key = "qqqqwwwweeeerrty"
+    
+    print("The text to be encrypted is '%s' and the key to be used alongside this is '%s'."%(text,key))
+
     text = repl(text)
     key = repl(key)
     h = aesEncrypt(text, key)
-    print(remake(h))
+
+    print("The encrypted code text is: %s."%(remake(h)))
     d = aesDecrypt(h, key)
-    print(remake(d))
+    print("After running the decryption on the above encrypted text, the output was: '%s'"%(remake(d)))
 
 if __name__ == "__main__":
     main()
