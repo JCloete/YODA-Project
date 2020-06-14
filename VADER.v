@@ -14,8 +14,10 @@ module VADER(
     //output wire [7:0]seg, //Seg display, to be linked with state (active low)
     //output wire [7:0]segdriv, //Seg driv (active low)
     output reg [2:0]led, //RGB led (to be linked state in HW)
-    output reg [2:0]state //State (wait - 0/decrypt - 1/dictionary - 2/brute - 3/success - 4/failure - 5) <- monitor in test bench
+    output reg [2:0]state
     );
+    // State (wait - 0/decrypt - 1/dictionary - 2/brute - 3/success - 4/failure - 5)
+    // Monitor in test bench
     
     //Internal variables
     wire resState;	// Resets our system to the beginning
@@ -67,7 +69,8 @@ module VADER(
         end
     end
     
-	// Resetting the system back to the beginning to allow for a different password to be guessed
+	// Resetting the system back to the beginning to allow for a different password
+	// to be guessed
     always @(posedge resState) begin
         bruteCounter <= 0;
         addra <= 0;
@@ -103,7 +106,8 @@ module VADER(
             addra <= addra + 1;
             
             // End loop check
-            if (addra - `dictionaryStart >= `dictionarySize) begin // Give up on dictionary once all passwords have been attempted.
+            // Give up on dictionary once all passwords have been attempted.
+            if (addra - `dictionaryStart >= `dictionarySize) begin 
                 addra = 0;
                 state = 3; // Proceed to brute force attack
             end
@@ -119,7 +123,8 @@ module VADER(
             bruteCounter <= bruteCounter + 1;
             
             // End Loop Check
-            if (bruteCounter >= `bruteAttempts) begin // Give up on brute force once a certain amount of tries have elapsed.
+            // Give up on brute force once a certain amount of tries have elapsed.
+            if (bruteCounter >= `bruteAttempts) begin 
                 state = 5;
             end
         end
