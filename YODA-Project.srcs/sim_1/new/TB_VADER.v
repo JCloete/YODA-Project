@@ -24,9 +24,10 @@ module TB_VADER();
     reg clk;
     reg reset;
     reg start;
+    wire [2:0] led;
     wire [2:0] state;
     
-    VADER VADER(clk, reset, start, state);
+    VADER VADER(clk, reset, start, led, state);
     
     initial begin
         clk <= 0;
@@ -53,6 +54,9 @@ module TB_VADER();
         clk <= 0;
         #10
         clk <= 1;
+        #10
+        clk <= 0;
+        start <= 0;
     end
     
     always 
