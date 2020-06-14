@@ -17,22 +17,15 @@
         end
     endfunction
     
-    function subBytes();
-    // Use the sbox module to get the values out and easily collected
-    //  The initialisation is: sbox name(inversion?, location, output)
-        input[7:0] state[15:0];
+    sbox mut(invert, in, out);
+
+    function subBytes;
         input inv;
-        reg[7:0] i = 0;
+        input incoming_byte;
         begin
-            if (i < 128) begin
-                if (inv) begin
-                    state[i] = sbox_i[state[i]];
-                end
-                else begin
-                    state[i] = sbox[state[i]];
-                end
-                i = i + 1;
-            end
+            decrypt = inv;
+            val = b;
+            subBytes = out;
         end
     endfunction
         
