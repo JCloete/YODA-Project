@@ -103,51 +103,6 @@ def keyScheduleCore(word, i):
     newWord[0] = newWord[0]^rcon[i]
     return newWord
 
-# expand 256 bit cipher key into 240 byte key from which
-# each round key is derived
-def expandKey(cipherKey):
-    if 1 == 1:
-        return cipherKey
-    cipherKeySize = len(cipherKey)
-    assert cipherKeySize == 16
-    # container for expanded key
-    expandedKey = []
-    currentSize = 0
-    rconIter = 1
-    # temporary list to store 4 bytes at a time
-    t = [0,0,0,0]
-
-    # copy the first 32 bytes of the cipher key to the expanded key
-    for i in range(cipherKeySize):
-        expandedKey.append(cipherKey[i])
-    currentSize += cipherKeySize
-
-    # generate the remaining bytes until we get a total key size
-    # of 240 bytes
-    while currentSize < 240:
-        # assign previous 4 bytes to the temporary storage t
-        for i in range(4):
-            t[i] = expandedKey[(currentSize - 4) + i]
-
-        # every 32 bytes apply the core schedule to t
-        if currentSize % cipherKeySize == 0:
-            t = keyScheduleCore(t, rconIter)
-            rconIter += 1
-
-        # since we're using a 256-bit key -> add an extra sbox transform
-        if currentSize % cipherKeySize == 16:
-            for i in range(4):
-                t[i] = sbox[t[i]]
-
-        # XOR t with the 4-byte block [16,24,32] bytes before the end of the
-        # current expanded key.  These 4 bytes become the next bytes in the
-        # expanded key
-        for i in range(4):
-            expandedKey.append(((expandedKey[currentSize - cipherKeySize]) ^ (t[i])))
-            currentSize += 1
-            
-    return expandedKey
-
 # do sbox transform on each of the values in the state table
 def subBytes(state):
     for i in range(len(state)):
@@ -251,20 +206,16 @@ def aesRoundInv(state, roundKey):
     subBytesInv(state)
 
 
-# returns a 16-byte round key based on an expanded key and round number
-def createRoundKey(expandedKey, n):
-    return expandedKey
-
 # create a key from a user-supplied password using SHA-256
 # wrapper function for 14 rounds of AES since we're using a 256-bit key
 def aesMain(state, expandedKey, numRounds=10):
-    roundKey = createRoundKey(expandedKey, 0)
+    roundKey = expandedKey
     addRoundKey(state, roundKey)
     for i in range(1, numRounds):
-        roundKey = createRoundKey(expandedKey, i)
+        roundKey = expandedKey
         aesRound(state, roundKey)
     # final round - leave out the mixColumns transformation
-    roundKey = createRoundKey(expandedKey, numRounds)
+    roundKey = expandedKey
     subBytes(state)
     shiftRows(state)
     addRoundKey(state, roundKey)
@@ -272,29 +223,29 @@ def aesMain(state, expandedKey, numRounds=10):
 # 14 rounds of AES inverse since we're using a 256-bit key
 def aesMainInv(state, expandedKey, numRounds=10):
     # create roundKey for "last" round since we're going in reverse
-    roundKey = createRoundKey(expandedKey, numRounds)
+    roundKey = expandedKey
     # addRoundKey is the same funtion for inverse since it uses XOR
     addRoundKey(state, roundKey)
     shiftRowsInv(state)
     subBytesInv(state)
     for i in range(numRounds-1,0,-1):
-        roundKey = createRoundKey(expandedKey, i)
+        roundKey = expandedKey
         aesRoundInv(state, roundKey)
     # last round - leave out the mixColumns transformation
-    roundKey = createRoundKey(expandedKey, 0)
+    roundKey = expandedKey
     addRoundKey(state, roundKey)
     
 # aesEncrypt - encrypt a single block of plaintext
 def aesEncrypt(plaintext, key):
     block = copy(plaintext)
-    expandedKey = expandKey(key)
+    expandedKey = key
     aesMain(block, expandedKey)
     return block
 
 # aesDecrypt - decrypte a single block of ciphertext
 def aesDecrypt(ciphertext, key):
     block = copy(ciphertext)
-    expandedKey = expandKey(key)
+    expandedKey = key
     aesMainInv(block, expandedKey)
     return block
 

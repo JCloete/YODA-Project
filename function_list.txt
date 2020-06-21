@@ -1,7 +1,6 @@
 //Function variables (to have values added later)
-    reg[7:0] sbox[15:0];
-    reg[7:0] sbox_i[15:0];
-    reg[7:0] rcon[15:0];
+    reg [7:0] arr [15:0]; // The array with the data
+    reg [7:0] key [15:0]; // The array with the key
     
     //Function definition zone
     //---------------------------------------------------------------
@@ -40,10 +39,7 @@
                     if (inv == 1) begin
                         while (c < f) begin
                             t = arr[f*4];
-                            arr[(f*4) + 0] = arr[(f*4) + 1];
-                            arr[(f*4) + 1] = arr[(f*4) + 2];
-                            arr[(f*4) + 2] = arr[(f*4) + 3];
-                            arr[(f*4) + 3] = t;
+                            arr[(f*4) + 0] = arr[(f*4) + 1]; arr[(f*4) + 1] = arr[(f*4) + 2]; arr[(f*4) + 2] = arr[(f*4) + 3]; arr[(f*4) + 3] = t;
                             c = c + 1;
                         end
                         c = 0;
@@ -51,10 +47,7 @@
                         for (j = 0;j < 3 ;j = j + 1 ) begin
                             while (c < f) begin
                             t = arr[f*4];
-                            arr[(f*4) + 0] = arr[(f*4) + 1];
-                            arr[(f*4) + 1] = arr[(f*4) + 2];
-                            arr[(f*4) + 2] = arr[(f*4) + 3];
-                            arr[(f*4) + 3] = t;
+                            arr[(f*4) + 0] = arr[(f*4) + 1]; arr[(f*4) + 1] = arr[(f*4) + 2]; arr[(f*4) + 2] = arr[(f*4) + 3]; arr[(f*4) + 3] = t;
                             c = c + 1;
                         end
                         c = 0;
@@ -73,8 +66,6 @@
             keySchedule = keySchedule ^ rcon[i];
         end
     endfunction
-    
-    //TO-DO: Expand Key, createRoundKey
     
     function [7:0]galois;
         input[7:0] a;
