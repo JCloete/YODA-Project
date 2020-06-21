@@ -7,6 +7,8 @@
 import sys, string
 from copy import copy
 from random import randint
+import time
+import matplotlib.pyplot as plt
 
 # The actual Rijndael specification includes variable block size, but
 # AES uses a fixed block size of 16 bytes (128 bits)
@@ -241,7 +243,6 @@ def aesRound(state, roundKey):
     mixColumns(state)
     addRoundKey(state, roundKey)
 
-
 # aesRoundInv applies each of the four inverse transformations
 def aesRoundInv(state, roundKey):
     addRoundKey(state, roundKey)
@@ -310,21 +311,62 @@ def remake(arr):
     for i in arr:
         out += chr(i)
     return out
+
+def averageNarray(bigArray):
+    a = []
+    fill = False
+    for i in bigArray:
+        if not fill:
+            fill = True
+            for j in i:
+                a.append(j)
+            continue
+        for pos, item in enumerate(i):
+            a[pos] = a[pos] + item
     
+    for pos,item in enumerate(a):
+        a[pos] = item / len(bigArray)
+    
+    return a
+
+        
+
 # gather command line arguments and validate input
 def main():
-    text = "Discombobulate"
-    key = "qqqqwwwweeeerrty"
-    
-    print("The text to be encrypted is '%s' and the key to be used alongside this is '%s'."%(text,key))
 
-    text = repl(text)
-    key = repl(key)
-    h = aesEncrypt(text, key)
+    times = [] # in ms
+    x = []
+    text_in = "Discombobulateme"
+    key_in = "qqqqwwwweeeerrty"
+    b = []
+    for i in range(10):
+        times = []
+        for i in range(1,17):
+            # print("The text to be encrypted is '%s' and the key to be used alongside this is '%s'."%(text,key))
+            text = repl(text_in[:i])
+            key = repl(key_in)
+            h = aesEncrypt(text, key)
+            # print("The encrypted code text is: %s."%(remake(h)))
+            # print("After running the decryption on the above encrypted text, the output was: '%s'"%(remake(d)))
+            
+            tic = time.perf_counter()
+            d = aesDecrypt(h, key)
+            toc = time.perf_counter()
+            
+            t = round((toc - tic) * 1000,2)
+            # print(t)
+            times.append(t)
+        b.append(times)
 
-    print("The encrypted code text is: %s."%(remake(h)))
-    d = aesDecrypt(h, key)
-    print("After running the decryption on the above encrypted text, the output was: '%s'"%(remake(d)))
-
+    for i in range(1,17):
+        x.append(i)
+    times = averageNarray(b)
+    # print(times)
+    plt.figure()
+    plt.ylabel("Run time (ms)")
+    plt.xlabel("Password length")
+    plt.title("Average runtime per password length over 10 decryption attempts")
+    plt.plot(x,times,"-r")
+    plt.show()
 if __name__ == "__main__":
     main()
