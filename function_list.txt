@@ -1,9 +1,11 @@
-//Function variables (to have values added later)
-    reg [7:0] arr [15:0]; // The array with the data
+reg [7:0] arr [15:0]; // The array with the data
     reg [7:0] key [15:0]; // The array with the key
+    reg invert = 1;
+    reg [7:0] in;
+    wire reg [7:0] out;
+    // ----------          ----- FUNCTION DECLARATIONS -----         ----------//
+    sbox mut(clk,invert, in, out);
     
-    //Function definition zone
-    //---------------------------------------------------------------
     function addKey;
         input inv;
         integer i;
@@ -16,18 +18,16 @@
         end
     endfunction
     
-    sbox mut(invert, in, out);
-
     function subBytes;
         input inv;
         input incoming_byte;
         begin
-            decrypt = inv;
-            val = b;
+            invert = inv;
+            in = incoming_byte;
             subBytes = out;
         end
     endfunction
-        
+
     function shiftRows;
         input inv;
         integer f,j,t;
@@ -57,16 +57,6 @@
         end
     endfunction
     
-    function[7:0] keySchedule();
-        input[7:0] element;
-        input[3:0] i;
-        begin
-            element = rotate(element, 1);
-            keySchedule = sbox[element]; //Possible incorrect. Do check.
-            keySchedule = keySchedule ^ rcon[i];
-        end
-    endfunction
-    
     function [7:0]galois;
         input[7:0] a;
         input[7:0] b;
@@ -90,7 +80,7 @@
         end
     endfunction
 
-    function mixColumn;
+    function mixColumns;
         input inv;
         reg [7:0] temp [3:0];
         integer count;
@@ -117,18 +107,59 @@
             end
         end
     endfunction
-    
-    function transform;
-        input[7:0] state[15:0];
-        input[7:0] roundKey;
+
+    function round;
         input inv;
+        integer dump, i;
         begin
-            if (inv) begin
-                //addKey(state, roundKey); Here be errors
+            if (inv == 1) begin
+                dump = addKey(inv);
+                dump = mixColumns(inv);
+                dump = shiftRows(inv);
+                for (i=0; i < 16; i = i + 1) begin
+                    dump = subBytes(inv, arr[i]);
+                end
             end
             else begin
-            
+                for (i=0; i < 16; i = i + 1) begin
+                    dump = subBytes(inv, arr[i]);
+                end
+                dump = shiftRows(inv);
+                dump = mixColumns(inv);
+                dump = addKey(inv);
+            end
+        end 
+    endfunction
+
+    function cyrpt;
+        input inv;
+        integer r,i,dump;
+        begin
+            if (inv == 1) begin
+                dump = addKey(inv);
+                dump = shiftRows(inv);
+                for (i=0; i < 16; i = i + 1) begin
+                    dump = subBytes(inv, arr[i]);
+                end
+                for (r = 0; r < 9; r = r+1) begin
+                    dump = round(inv);
+                end
+                dump = addKey(inv);
+            end
+            else begin
+                dump = addKey(inv);
+                for (r = 0; r < 9; r = r+1) begin
+                    dump = round(inv);
+                end
+                for (i=0; i < 16; i = i + 1) begin
+                    dump = subBytes(inv, arr[i]);
+                end
+                dump = shiftRows(inv);
+                dump = addKey(inv);
             end
         end
+        
     endfunction
-//---------------------------------------------------------------
+
+
+    // ----------          ----- ----    -----    ---- -----         ----------//

@@ -1,10 +1,11 @@
 module sbox(
+    input clk,
     input inv,
     input [7:0] value,
     output reg [7:0] swap
 );
 
-always @(*)
+always @(posedge clk)
     begin
         if (inv != 1)
             begin
