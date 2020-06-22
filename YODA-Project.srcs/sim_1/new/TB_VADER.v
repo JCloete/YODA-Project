@@ -26,10 +26,14 @@ module TB_VADER();
     reg start;
     wire [2:0] led;
     wire [2:0] state;
+    wire done;
     
-    VADER VADER(clk, reset, start, led, state);
+    // VADER VADER(clk, reset, start, led, state);
+    uVader papi(clk, reset, start, led, state);
     
     initial begin
+        // $display("clock\treset\tstart\tled\tstate\tdone");
+        // $monitor("%d\t%d\t%d\t%d\t%d\t%d",clk,reset,start, led, state, done);
         clk <= 0;
         reset <= 0;
         start <= 0;
@@ -57,6 +61,7 @@ module TB_VADER();
         #10
         clk <= 0;
         start <= 0;
+        $finish;
     end
     
     always 

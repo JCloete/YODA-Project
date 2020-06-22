@@ -280,23 +280,26 @@ def averageNarray(bigArray):
     
     return a
 
-        
+def printArray(arr):
+    for i in range(4):
+        print("%3d %3d %3d %3d"%(arr[i*4], arr[(i*4)+1], arr[(i*4)+2], arr[(i*4)+3]))
+    print()      
 
-# gather command line arguments and validate input
-def main():
-
+def tests():
     times = [] # in ms
     x = []
     text_in = "Discombobulateme"
     key_in = "qqqqwwwweeeerrty"
     b = []
-    for i in range(10):
+    printArray(repl(text_in))
+    for i in range(1):
         times = []
         for i in range(1,17):
             # print("The text to be encrypted is '%s' and the key to be used alongside this is '%s'."%(text,key))
             text = repl(text_in[:i])
             key = repl(key_in)
             h = aesEncrypt(text, key)
+            # print(h)
             # print("The encrypted code text is: %s."%(remake(h)))
             # print("After running the decryption on the above encrypted text, the output was: '%s'"%(remake(d)))
             
@@ -319,5 +322,38 @@ def main():
     plt.title("Average runtime per password length over 10 decryption attempts")
     plt.plot(x,times,"-r")
     plt.show()
+
+def rounds():
+    print("This will only do 1 round of AES")
+    text_in = "Discombobulateme"
+    key_in = "qqqqwwwweeeerrty"
+    arr = repl(text_in)
+    
+    key = repl(key_in)
+    arr = aesEncrypt(arr,key)
+    print("Start array:")
+    printArray(arr)
+
+    print("Added key")
+    addRoundKey(arr,key)
+    printArray(arr)
+
+    print("Shifted rows")
+    shiftRowsInv(arr)
+    printArray(arr)
+
+    print("Sub Bytes")
+    subBytesInv(arr)
+    printArray(arr)
+
+    print("Mixed columns")
+    mixColumnInv(arr)
+    printArray(arr)
+
+
+
+# gather command line arguments and validate input
+def main():
+    rounds()
 if __name__ == "__main__":
     main()

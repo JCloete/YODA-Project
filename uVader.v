@@ -1,16 +1,20 @@
-module (
-    input clk;
-    input  start;
-    output  done;
+module uVader(
+    input clk,
+    input reset,
+    input  start,
+    output reg [2:0]led, //RGB led (to be linked state in HW)
+    output reg [2:0]state
 );
 
-
+// key = [113, 113, 113, 113, 119, 119, 119, 119, 101, 101, 101, 101, 114, 114, 116, 121]
+// arr = [68, 105, 115, 99, 111, 109, 98, 111, 98, 117, 108, 97, 116, 101, 109, 101]
     reg [7:0] arr [15:0]; // The array with the data
     reg [7:0] key [15:0]; // The array with the key
     reg invert = 1;
     reg [7:0] in;
     wire [7:0] out;
-    assign arr = {68, 105, 115, 99, 111, 109, 98, 111, 98, 117, 108, 97, 116, 101, 109, 101};
+    integer d = 0;
+    
     // ----------          ----- FUNCTION DECLARATIONS -----         ----------//
     sbox mut(clk,invert, in, out);
     
@@ -30,7 +34,6 @@ module (
         input inv;
         input incoming_byte;
         begin
-            invert = inv;
             in = incoming_byte;
             subBytes = out;
         end
@@ -44,7 +47,7 @@ module (
             c = 1;
             for (f = 0; f < 4; f = f + 1)
                 begin
-                    if (inv == 1) begin
+                    if (inv == 0) begin
                         while (c < f) begin
                             t = arr[f*4];
                             arr[(f*4) + 0] = arr[(f*4) + 1]; arr[(f*4) + 1] = arr[(f*4) + 2]; arr[(f*4) + 2] = arr[(f*4) + 3]; arr[(f*4) + 3] = t;
@@ -139,7 +142,7 @@ module (
         end 
     endfunction
 
-    function cyrpt; // 1 will decrypt, 0 will encrypt
+    function crypt; // 1 will decrypt, 0 will encrypt
         input inv;
         integer r,i,dump;
         begin
@@ -169,6 +172,92 @@ module (
         
     endfunction
 
+    always @(posedge reset) begin
+        arr[0] = 204;
+        arr[1] = 110;
+        arr[2] = 219;
+        arr[3] = 177;
+        arr[4] = 21;
+        arr[5] = 152;
+        arr[6] = 49;
+        arr[7] = 113;
+        arr[8] = 39;
+        arr[9] = 162;
+        arr[10] = 150;
+        arr[11] = 37;
+        arr[12] = 144;
+        arr[13] = 24;
+        arr[14] = 51;
+        arr[15] = 210;
+        key[0] = 113;
+        key[1] = 113;
+        key[2] = 113;
+        key[3] = 113;
+        key[4] = 119;
+        key[5] = 119;
+        key[6] = 119;
+        key[7] = 119;
+        key[8] = 101;
+        key[9] = 101;
+        key[10] = 101;
+        key[11] = 101;
+        key[12] = 114;
+        key[13] = 114;
+        key[14] = 116;
+        key[15] = 121;
+    end
 
+    integer i;
+    always @(posedge start) begin
+        // d = crypt(1);
+        $display("Start Array");
+        for (i = 0; i < 16; i = i + 4)
+            begin
+                $display("%3d %3d %3d %3d",arr[i], arr[i + 1], arr[i + 2], arr[i + 3]);
+            end
+        
+        $display("\nAdd Key");
+        d = addKey(1);
+        for (i = 0; i < 16; i = i + 4)
+            begin
+                $display("%3d %3d %3d %3d",arr[i], arr[i + 1], arr[i + 2], arr[i + 3]);
+            end
+
+        $display("\nShift Rows");
+        d = shiftRows(1);
+        for (i = 0; i < 16; i = i + 4)
+            begin
+                $display("%3d %3d %3d %3d",arr[i], arr[i + 1], arr[i + 2], arr[i + 3]);
+            end
+
+        $display("\nSub Bytes");
+        for (i=0; i < 16; i = i + 1) begin
+                d = subBytes(1, arr[i]);
+            end
+        for (i = 0; i < 16; i = i + 4)
+            begin
+                $display("%3d %3d %3d %3d",arr[i], arr[i + 1], arr[i + 2], arr[i + 3]);
+            end
+        
+        $display("\nMix Columns");
+        d = mixColumns(1);
+        for (i = 0; i < 16; i = i + 4)
+            begin
+                $display("%3d %3d %3d %3d",arr[i], arr[i + 1], arr[i + 2], arr[i + 3]);
+            end
+        
+        
+        // d = crypt(0);
+        // $display("\n-- Start array --\n");
+        // for (i = 0; i < 16; i = i + 4)
+        //     begin
+        //         $display("%3d %3d %3d %3d",arr[i], arr[i + 1], arr[i + 2], arr[i + 3]);
+        //     end
+        // if crypt(1) we expect:
+        // 68 105 115  99
+        // 111 109  98 111
+        // 98 117 108  97
+        // 116 101 109 101
+    end
     // ----------          ----- ----    -----    ---- -----         ----------//
 endmodule // 

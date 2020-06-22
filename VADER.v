@@ -18,12 +18,176 @@ module VADER(
     );
     // State (wait - 0/decrypt - 1/dictionary - 2/brute - 3/success - 4/failure - 5)
     // Monitor in test bench
+    reg [7:0] arr [15:0]; // The array with the data
+    reg [7:0] key [15:0]; // The array with the key
+    reg invert = 1;
+    reg [7:0] in;
+    wire [7:0] out;
+    // ----------          ----- FUNCTION DECLARATIONS -----         ----------//
+    sbox mut(clk,invert, in, out);
     
+    function addKey;
+        input inv;
+        integer i;
+        begin
+            i = 0;
+            while (i < 128) begin
+                arr[i] = arr[i] ^ key[i];
+                i = i + 1;
+            end
+        end
+    endfunction
+    
+    function subBytes;
+        input inv;
+        input incoming_byte;
+        begin
+            invert = inv;
+            in = incoming_byte;
+            subBytes = out;
+        end
+    endfunction
+
+    function shiftRows;
+        input inv;
+        integer f,j,t;
+        integer c;
+        begin
+            c = 1;
+            for (f = 0; f < 4; f = f + 1)
+                begin
+                    if (inv == 1) begin
+                        while (c < f) begin
+                            t = arr[f*4];
+                            arr[(f*4) + 0] = arr[(f*4) + 1]; arr[(f*4) + 1] = arr[(f*4) + 2]; arr[(f*4) + 2] = arr[(f*4) + 3]; arr[(f*4) + 3] = t;
+                            c = c + 1;
+                        end
+                        c = 0;
+                    end else begin
+                        for (j = 0;j < 3 ;j = j + 1 ) begin
+                            while (c < f) begin
+                            t = arr[f*4];
+                            arr[(f*4) + 0] = arr[(f*4) + 1]; arr[(f*4) + 1] = arr[(f*4) + 2]; arr[(f*4) + 2] = arr[(f*4) + 3]; arr[(f*4) + 3] = t;
+                            c = c + 1;
+                        end
+                        c = 0;
+                        end
+                    end
+                end
+        end
+    endfunction
+    
+    function [7:0]galois;
+        input[7:0] a;
+        input[7:0] b;
+        reg[7:0] p;
+        reg[7:0] highBit;
+        begin
+            p = 0;
+            highBit = 0;
+            repeat (8) begin
+                if ((b & 1) == 1) begin
+                    p = p ^ a;
+                end
+                highBit = a & 8'h80;
+                a = a << 1;
+                if (highBit == 8'h80) begin
+                    a = a ^ 8'h1b;
+                end
+                b = b >> 1;
+            end
+            galois = p % 256;
+        end
+    endfunction
+
+    function mixColumns;
+        input inv;
+        reg [7:0] temp [3:0];
+        integer count;
+        reg [3:0] a,b,c,d;
+        begin
+            if (inv == 0) begin
+                for (count = 0; count < 4; count = count + 1) begin
+                    a = count + 0; b = count + 4; c = count + 8; d = count + 12;
+                    temp[0] = arr[a]; temp[1] = arr[b]; temp[2] = arr[c]; temp[3] = arr[d];
+                    arr[a] = galois(temp[0], 2) ^ galois(temp[3], 1) ^ galois(temp[2], 1) ^ galois(temp[1], 3);
+                    arr[b] = galois(temp[1], 2) ^ galois(temp[0], 1) ^ galois(temp[3], 1) ^ galois(temp[2], 3);
+                    arr[c] = galois(temp[2], 2) ^ galois(temp[1], 1) ^ galois(temp[0], 1) ^ galois(temp[3], 3);
+                    arr[d] = galois(temp[3], 2) ^ galois(temp[2], 1) ^ galois(temp[1], 1) ^ galois(temp[0], 3);
+                end
+            end else begin
+                for (count = 0; count < 4; count = count + 1) begin
+                    a = count + 0; b = count + 4; c = count + 8; d = count + 12;
+                    temp[0] = arr[a]; temp[1] = arr[b]; temp[2] = arr[c]; temp[3] = arr[d];
+                    arr[a] = galois(temp[0], 14) ^ galois(temp[3], 9) ^ galois(temp[2], 13) ^ galois(temp[1], 11);
+                    arr[b] = galois(temp[1], 14) ^ galois(temp[0], 9) ^ galois(temp[3], 13) ^ galois(temp[2], 11);
+                    arr[c] = galois(temp[2], 14) ^ galois(temp[1], 9) ^ galois(temp[0], 13) ^ galois(temp[3], 11);
+                    arr[d] = galois(temp[3], 14) ^ galois(temp[2], 9) ^ galois(temp[1], 13) ^ galois(temp[0], 11);
+            end
+            end
+        end
+    endfunction
+
+    function round;
+        input inv;
+        integer dump, i;
+        begin
+            if (inv == 1) begin
+                dump = addKey(inv);
+                dump = mixColumns(inv);
+                dump = shiftRows(inv);
+                for (i=0; i < 16; i = i + 1) begin
+                    dump = subBytes(inv, arr[i]);
+                end
+            end
+            else begin
+                for (i=0; i < 16; i = i + 1) begin
+                    dump = subBytes(inv, arr[i]);
+                end
+                dump = shiftRows(inv);
+                dump = mixColumns(inv);
+                dump = addKey(inv);
+            end
+        end 
+    endfunction
+
+    function cyrpt; // 1 will decrypt, 0 will encrypt
+        input inv;
+        integer r,i,dump;
+        begin
+            if (inv == 1) begin
+                dump = addKey(inv);
+                dump = shiftRows(inv);
+                for (i=0; i < 16; i = i + 1) begin
+                    dump = subBytes(inv, arr[i]);
+                end
+                for (r = 0; r < 9; r = r+1) begin
+                    dump = round(inv);
+                end
+                dump = addKey(inv);
+            end
+            else begin
+                dump = addKey(inv);
+                for (r = 0; r < 9; r = r+1) begin
+                    dump = round(inv);
+                end
+                for (i=0; i < 16; i = i + 1) begin
+                    dump = subBytes(inv, arr[i]);
+                end
+                dump = shiftRows(inv);
+                dump = addKey(inv);
+            end
+        end
+        
+    endfunction
+
+
+    // ----------          ----- ----    -----    ---- -----         ----------//
     //Internal variables
     wire resState;	// Resets our system to the beginning
-    Delayed_Res resetter(clk, reset, resState);
+    // Delayed_Res resetter(clk, reset, resState);
     wire startState; // Starts our system once resetted
-    Debounce Debounce(clk, start, startState);
+    // Debounce Debounce(clk, start, startState);
     
     // Memory IO
     reg ena = 1; // Enable reading memory
@@ -35,14 +199,14 @@ module VADER(
     
     //BRAM Blocks
     //1. SD Card simulation
-    SD_SIM sd(
-        .clka(clk),    // input wire clka
-        .ena(ena),      // input wire ena
-        .wea(wea),      // input wire [0 : 0] wea
-        .addra(addra),  // input wire [3 : 0] addra
-        .dina(dina),    // input wire [255 : 0] dina
-        .douta(douta)  // output wire [255 : 0] douta
-    );
+    // SD_SIM sd(
+    //     .clka(clk),    // input wire clka
+    //     .ena(ena),      // input wire ena
+    //     .wea(wea),      // input wire [0 : 0] wea
+    //     .addra(addra),  // input wire [3 : 0] addra
+    //     .dina(dina),    // input wire [255 : 0] dina
+    //     .douta(douta)  // output wire [255 : 0] douta
+    // );
     
     // Store hashed password
     reg [127:0] hPass;
