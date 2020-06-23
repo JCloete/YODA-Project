@@ -75,9 +75,9 @@ module uVader(
     endfunction
     
     function [7:0]galois;
-        input[7:0] a;
+        input[31:0] a;
         input[7:0] b;
-        reg[7:0] p;
+        reg[31:0] p;
         reg[7:0] highBit;
         begin
             p = 0;
@@ -239,55 +239,17 @@ module uVader(
         isbox[232] = 200; isbox[233] = 235; isbox[234] = 187; isbox[235] =  60; isbox[236] = 131; isbox[237] =  83; isbox[238] = 153; isbox[239] =  97; 
         isbox[240] =  23; isbox[241] =  43; isbox[242] =   4; isbox[243] = 126; isbox[244] = 186; isbox[245] = 119; isbox[246] = 214; isbox[247] =  38; 
         isbox[248] = 225; isbox[249] = 105; isbox[250] =  20; isbox[251] =  99; isbox[252] =  85; isbox[253] =  33; isbox[254] =  12; isbox[255] = 125; 
-
     end
 
     integer i;
     always @(posedge start) begin
-        // d = crypt(1);
-        $display("Start Array");
-        for (i = 0; i < 16; i = i + 4)
-            begin
-                $display("%3d %3d %3d %3d",arr[i], arr[i + 1], arr[i + 2], arr[i + 3]);
-            end
+        d = crypt(1);
         
-        $display("\nAdd Key");
-        d = addKey(1);
+        $display("-- Password array --");
         for (i = 0; i < 16; i = i + 4)
             begin
                 $display("%3d %3d %3d %3d",arr[i], arr[i + 1], arr[i + 2], arr[i + 3]);
             end
-
-        $display("\nShift Rows");
-        d = shiftRows(1);
-        for (i = 0; i < 16; i = i + 4)
-            begin
-                $display("%3d %3d %3d %3d",arr[i], arr[i + 1], arr[i + 2], arr[i + 3]);
-            end
-
-        $display("\nSub Bytes");
-        for (i=0; i < 16; i = i + 1) begin
-                arr[i] = isbox[arr[i]]; 
-            end
-        for (i = 0; i < 16; i = i + 4)
-            begin
-                $display("%3d %3d %3d %3d",arr[i], arr[i + 1], arr[i + 2], arr[i + 3]);
-            end
-        
-        $display("\nMix Columns");
-        d = mixColumns(1);
-        for (i = 0; i < 16; i = i + 4)
-            begin
-                $display("%3d %3d %3d %3d",arr[i], arr[i + 1], arr[i + 2], arr[i + 3]);
-            end
-        
-        
-        // d = crypt(0);
-        // $display("\n-- Start array --\n");
-        // for (i = 0; i < 16; i = i + 4)
-        //     begin
-        //         $display("%3d %3d %3d %3d",arr[i], arr[i + 1], arr[i + 2], arr[i + 3]);
-        //     end
         // if crypt(1) we expect:
         // 68 105 115  99
         // 111 109  98 111
