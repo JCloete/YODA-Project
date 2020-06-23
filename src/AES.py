@@ -16,6 +16,20 @@ import matplotlib.pyplot as plt
 # Additionally, AES allows for a variable key size, though this implementation
 # of AES uses only 256-bit cipher keys (AES-256)
 
+roundTime = []
+subTime = []
+fullTime = []
+addTime = []
+mixTime = []
+shiftTime = []
+
+iroundTime = []
+isubTime = []
+ifullTime = []
+iaddTime = []
+imixTime = []
+ishiftTime = []
+
 sbox = [
         0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
         0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0,
@@ -81,45 +95,47 @@ def rotate(word, n):
 # iterate over each "virtual" row in the state table and shift the bytes
 # to the LEFT by the appropriate offset
 def shiftRows(state):
+    tic = time.perf_counter()
+        
     for i in range(4):
         state[i*4:i*4+4] = rotate(state[i*4:i*4+4],i)
+    
+    toc = time.perf_counter()
+    shiftTime.append(round((toc - tic) * 1000,2))
 
 # iterate over each "virtual" row in the state table and shift the bytes
 # to the RIGHT by the appropriate offset
 def shiftRowsInv(state):
+    tic = time.perf_counter()
     for i in range(4):
         state[i*4:i*4+4] = rotate(state[i*4:i*4+4],-i)
-
-# takes 4-byte word and iteration number
-def keyScheduleCore(word, i):
-    # rotate word 1 byte to the left
-    word = rotate(word, 1)
-    newWord = []
-    # apply sbox substitution on all bytes of word
-    for byte in word:
-        print(byte)
-        newWord.append(sbox[byte])
-    # XOR the output of the rcon[i] transformation with the first part of the word
-    newWord[0] = newWord[0]^rcon[i]
-    return newWord
+    toc = time.perf_counter()
+    ishiftTime.append(round((toc - tic) * 1000,2))
 
 # do sbox transform on each of the values in the state table
 def subBytes(state):
+    tic = time.perf_counter()
     for i in range(len(state)):
-        #print "state[i]:", state[i]
-        #print "sbox[state[i]]:", sbox[state[i]]
         state[i] = sbox[state[i]]
+    toc = time.perf_counter()
+    subTime.append(round((toc - tic) * 1000,2))
 
 # inverse sbox transform on each byte in state table
 def subBytesInv(state):
+    tic = time.perf_counter()
     for i in range(len(state)):
         state[i] = sboxInv[state[i]]
+    toc = time.perf_counter()
+    isubTime.append(round((toc - tic) * 1000,2))
 
 # XOR each byte of the roundKey with the state table
 def addRoundKey(state, roundKey):
+    tic = time.perf_counter()
     for i in range(0,len(state)):
         a = state[i] ^ roundKey[i]
         state[i] = a
+    toc = time.perf_counter()
+    addTime.append(round((toc - tic) * 1000,2))
 
 # Galois Multiplication
 def galoisMult(a, b):
@@ -156,6 +172,7 @@ def mixColumnInv(column):
 # mixColumns is a wrapper for mixColumn - generates a "virtual" column from
 # the state table and applies the weird galois math
 def mixColumns(state):
+    tic = time.perf_counter()
     for i in range(4):
         column = []
         # create the column by taking the same item out of each "virtual" row
@@ -170,9 +187,13 @@ def mixColumns(state):
         for j in range(4):
             state[j*4+i] = column[j]
 
+    toc = time.perf_counter()
+    mixTime.append(round((toc - tic) * 1000,2))
+
 # mixColumnsInv is a wrapper for mixColumnInv - generates a "virtual" column from
 # the state table and applies the weird galois math
 def mixColumnsInv(state):
+    tic = time.perf_counter()
     for i in range(4):
         column = []
         # create the column by taking the same item out of each "virtual" row
@@ -185,25 +206,34 @@ def mixColumnsInv(state):
         # transfer the new values back into the state table
         for j in range(4):
             state[j*4+i] = column[j]
+    toc = time.perf_counter()
+    imixTime.append(round((toc - tic) * 1000,2))
 
 # aesRound applies each of the four transformations in order
 def aesRound(state, roundKey):
+    tic = time.perf_counter()
     subBytes(state)
     shiftRows(state)
     mixColumns(state)
     addRoundKey(state, roundKey)
+    toc = time.perf_counter()
+    roundTime.append(round((toc - tic) * 1000,2))
 
 # aesRoundInv applies each of the four inverse transformations
 def aesRoundInv(state, roundKey):
+    tic = time.perf_counter()
     addRoundKey(state, roundKey)
     mixColumnsInv(state)
     shiftRowsInv(state)
     subBytesInv(state)
+    toc = time.perf_counter()
+    iroundTime.append(round((toc - tic) * 1000,2))
 
 
 # create a key from a user-supplied password using SHA-256
 # wrapper function for 14 rounds of AES since we're using a 256-bit key
 def aesMain(state, expandedKey, numRounds=10):
+    tic = time.perf_counter()
     roundKey = expandedKey
     addRoundKey(state, roundKey)
     for i in range(1, numRounds):
@@ -214,9 +244,12 @@ def aesMain(state, expandedKey, numRounds=10):
     subBytes(state)
     shiftRows(state)
     addRoundKey(state, roundKey)
+    toc = time.perf_counter()
+    fullTime.append(round((toc - tic) * 1000,2))
 
 # 14 rounds of AES inverse since we're using a 256-bit key
 def aesMainInv(state, expandedKey, numRounds=10):
+    tic = time.perf_counter()
     # create roundKey for "last" round since we're going in reverse
     roundKey = expandedKey
     # addRoundKey is the same funtion for inverse since it uses XOR
@@ -229,6 +262,8 @@ def aesMainInv(state, expandedKey, numRounds=10):
     # last round - leave out the mixColumns transformation
     roundKey = expandedKey
     addRoundKey(state, roundKey)
+    toc = time.perf_counter()
+    ifullTime.append(round((toc - tic) * 1000,2))
     
 # aesEncrypt - encrypt a single block of plaintext
 def aesEncrypt(plaintext, key):
@@ -274,6 +309,14 @@ def averageNarray(bigArray):
         a[pos] = item / len(bigArray)
     
     return a
+
+def average(arr):
+    sum = 0
+    for i in arr:
+        sum += i
+    if len(arr) == 0:
+        return 0
+    return (sum/len(arr))
 
 def printArray(arr):
     for i in range(4):
@@ -347,11 +390,25 @@ def rounds():
     mixColumnsInv(arr)
     printArray(arr)
 
+def averageTest():
+    for i in range(100):
+        text_in = "Discombobulateme"
+        key_in = "qqqqwwwweeeerrty"
+        arr = repl(text_in)
+        key = repl(key_in)
+        h = aesEncrypt(arr,key)
+        aesDecrypt(h, key)
 
+    print("+------------+----------+-------+----------+---------+-----------+---------+")
+    print("|   Feature  | Fulltime | Round | subBytes | mixCols | shiftRows | addKey  |")
+    print("+------------+----------+-------+----------+---------+-----------+---------+")
+    print("| Encryption | %8.3f | %5.3f | %8.5f | %7.3f | %9.3f | %6.5f |"%(average(fullTime), average(roundTime), average(subTime), average(mixTime), average(shiftTime), average(addTime)))
+    print("| Decryption | %8.3f | %5.3f | %8.5f | %7.3f | %9.3f | %6.5f |"%(average(ifullTime), average(iroundTime), average(isubTime), average(imixTime), average(ishiftTime), average(iaddTime)))
+    print("+------------+----------+-------+----------+---------+-----------+---------+")
 
 # gather command line arguments and validate input
 def main():
-    tests()
+    averageTest()
 
 if __name__ == "__main__":
     main()
