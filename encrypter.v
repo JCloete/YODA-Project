@@ -1,24 +1,55 @@
-module uVader(
-    input clk,
-    input reset,
-    input  start,
-    output reg [2:0]led, //RGB led (to be linked state in HW)
-    output reg [2:0]state
+module encrypter(
+    input [127:0]data_in,
+    input decrypt,
+    output reg [127:0]data_out
 );
+// Control Registers
+    reg start_AES;
+    reg reset_AES;
 
 // key = [113, 113, 113, 113, 119, 119, 119, 119, 101, 101, 101, 101, 114, 114, 116, 121]
 // arr = [68, 105, 115, 99, 111, 109, 98, 111, 98, 117, 108, 97, 116, 101, 109, 101]
     reg [7:0] arr [15:0]; // The array with the data
     reg [7:0] key [15:0]; // The array with the key
     integer d = 0;
+    integer e = 0;
     reg [7:0] sbox [255:0];
     reg [7:0] isbox [255:0];
     
+    // ---------- Utility Function Declarations ---------//
+    function data_input;
+        input [127:0]data_string;
+        integer i,j,k;
+        begin
+            k = 0;
+            for (i=15; i > -1; i = i - 1) begin
+                for (j=0; j < 8; j = j + 1) begin
+                    arr[i][j] = data_string[k];
+                    k = k + 1;
+                end
+            end
+        end
+    endfunction
+    
+    function [127:0]data_output;
+        input invalid;
+        integer i,j,k;
+        begin
+            k = 0;
+            for (i=0; i < 16; i = i + 1) begin
+                for (j=0; j < 8; j = j + 1) begin
+                    data_output[k] = arr[i][j];
+                    k = k + 1;
+                end
+            end
+        end
+    endfunction
     
     // ----------          ----- FUNCTION DECLARATIONS -----         ----------//
     
     function subBytes;
         input inv;
+        integer i;
         begin
             if (inv == 0) begin
                 for (i=0; i < 16; i = i + 1) begin
@@ -169,9 +200,22 @@ module uVader(
         end
         
     endfunction
+    
+    initial begin
+        data_out = 0;
+        reset_AES = 0;
+        #10
+        reset_AES = 1;
+        #10
+        reset_AES = 0;
+    end
+    
+    always @(posedge decrypt) begin
+        e = data_input(data_in);
+        start_AES = 1;
+    end
 
-    always @(posedge reset) begin
-        arr[0] = 204;arr[1] = 110;arr[2] = 219;arr[3] = 177;arr[4] = 21;arr[5] = 152;arr[6] = 49;arr[7] = 113;arr[8] = 39;arr[9] = 162;arr[10] = 150;arr[11] = 37;arr[12] = 144;arr[13] = 24;arr[14] = 51;arr[15] = 210;
+    always @(posedge reset_AES) begin
         key[0] = 113; key[1] = 113; key[2] = 113; key[3] = 113; key[4] = 119; key[5] = 119; key[6] = 119; key[7] = 119; key[8] = 101; key[9] = 101; key[10] = 101; key[11] = 101; key[12] = 114; key[13] = 114; key[14] = 116; key[15] = 121;
         
         sbox[  0] =  99; sbox[  1] = 124; sbox[  2] = 119; sbox[  3] = 123; sbox[  4] = 242; sbox[  5] = 107; sbox[  6] = 111; sbox[  7] = 197; 
@@ -238,18 +282,39 @@ module uVader(
         isbox[224] = 160; isbox[225] = 224; isbox[226] =  59; isbox[227] =  77; isbox[228] = 174; isbox[229] =  42; isbox[230] = 245; isbox[231] = 176; 
         isbox[232] = 200; isbox[233] = 235; isbox[234] = 187; isbox[235] =  60; isbox[236] = 131; isbox[237] =  83; isbox[238] = 153; isbox[239] =  97; 
         isbox[240] =  23; isbox[241] =  43; isbox[242] =   4; isbox[243] = 126; isbox[244] = 186; isbox[245] = 119; isbox[246] = 214; isbox[247] =  38; 
-        isbox[248] = 225; isbox[249] = 105; isbox[250] =  20; isbox[251] =  99; isbox[252] =  85; isbox[253] =  33; isbox[254] =  12; isbox[255] = 125; 
+        isbox[248] = 225; isbox[249] = 105; isbox[250] =  20; isbox[251] =  99; isbox[252] =  85; isbox[253] =  33; isbox[254] =  12; isbox[255] = 125;
+        reset_AES = 0;
     end
 
     integer i;
-    always @(posedge start) begin
+    always @(posedge start_AES) begin
+        $display("TEST PASS: %c", 8'd65);
+    
+        $display("-- KEY --");
+        for (i = 0; i < 16; i = i + 1)
+        begin
+            $write("%c",key[i]);
+        end
+        $write("\n");
+        
+        $display("-- Password array Before --");
+        for (i = 0; i < 16; i = i + 1)
+        begin
+            $write("%c",arr[i]);
+        end
+        $write("\n");
+        
         d = crypt(1);
         
         $display("-- Password array --");
-        for (i = 0; i < 16; i = i + 4)
-            begin
-                $display("%3d %3d %3d %3d",arr[i], arr[i + 1], arr[i + 2], arr[i + 3]);
-            end
+        for (i = 0; i < 16; i = i + 1)
+        begin
+            $write("%c",arr[i]);
+        end
+        
+        $write("\n");
+        start_AES = 0;
+        reset_AES = 1;
         // if crypt(1) we expect:
         // 68 105 115  99
         // 111 109  98 111
@@ -257,4 +322,4 @@ module uVader(
         // 116 101 109 101
     end
     // ----------          ----- ----    -----    ---- -----         ----------//
-endmodule // 
+endmodule
