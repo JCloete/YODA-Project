@@ -1,5 +1,6 @@
 module encrypter(
     input [127:0]data_in,
+    input [127:0]key_in,
     input decrypt,
     output reg [127:0]data_out
 );
@@ -17,6 +18,20 @@ module encrypter(
     reg [7:0] isbox [255:0];
     
     // ---------- Utility Function Declarations ---------//
+        function key_input;
+        input [127:0]data_string;
+        integer i,j,k;
+        begin
+            k = 0;
+            for (i=15; i > -1; i = i - 1) begin
+                for (j=0; j < 8; j = j + 1) begin
+                    key[i][j] = data_string[k];
+                    k = k + 1;
+                end
+            end
+        end
+    endfunction
+    
     function data_input;
         input [127:0]data_string;
         integer i,j,k;
@@ -36,7 +51,7 @@ module encrypter(
         integer i,j,k;
         begin
             k = 0;
-            for (i=0; i < 16; i = i + 1) begin
+            for (i=15; i > -1; i = i - 1) begin
                 for (j=0; j < 8; j = j + 1) begin
                     data_output[k] = arr[i][j];
                     k = k + 1;
@@ -212,12 +227,11 @@ module encrypter(
     
     always @(posedge decrypt) begin
         e = data_input(data_in);
+        e = key_input(key_in);
         start_AES = 1;
     end
 
     always @(posedge reset_AES) begin
-        key[0] = 113; key[1] = 113; key[2] = 113; key[3] = 113; key[4] = 119; key[5] = 119; key[6] = 119; key[7] = 119; key[8] = 101; key[9] = 101; key[10] = 101; key[11] = 101; key[12] = 114; key[13] = 114; key[14] = 116; key[15] = 121;
-        
         sbox[  0] =  99; sbox[  1] = 124; sbox[  2] = 119; sbox[  3] = 123; sbox[  4] = 242; sbox[  5] = 107; sbox[  6] = 111; sbox[  7] = 197; 
         sbox[  8] =  48; sbox[  9] =   1; sbox[ 10] = 103; sbox[ 11] =  43; sbox[ 12] = 254; sbox[ 13] = 215; sbox[ 14] = 171; sbox[ 15] = 118; 
         sbox[ 16] = 202; sbox[ 17] = 130; sbox[ 18] = 201; sbox[ 19] = 125; sbox[ 20] = 250; sbox[ 21] =  89; sbox[ 22] =  71; sbox[ 23] = 240; 
@@ -287,9 +301,7 @@ module encrypter(
     end
 
     integer i;
-    always @(posedge start_AES) begin
-        $display("TEST PASS: %c", 8'd65);
-    
+    always @(posedge start_AES) begin   
         $display("-- KEY --");
         for (i = 0; i < 16; i = i + 1)
         begin
@@ -311,6 +323,8 @@ module encrypter(
         begin
             $write("%c",arr[i]);
         end
+        
+        data_out = data_output(0);
         
         $write("\n");
         start_AES = 0;

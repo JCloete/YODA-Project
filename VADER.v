@@ -24,6 +24,15 @@ module VADER(
     wire startState; // Starts our system once resetted
     // Debounce Debounce(clk, start, startState);
     
+    // Variables to interface with encryption module
+    reg [127:0]data_in;
+    reg [127:0]key_in;
+    reg decrypt;
+    wire [127:0]data_out;
+    
+    // Instantiate the encrypter module
+    encrypter encrypter(data_in, key_in, decrypt, data_out);
+    
     // Memory IO
     reg ena = 1; // Enable reading memory
     reg wea = 0; // Not current writing anything
@@ -34,14 +43,14 @@ module VADER(
     
     //BRAM Blocks
     //1. SD Card simulation
-    // SD_SIM sd(
-    //     .clka(clk),    // input wire clka
-    //     .ena(ena),      // input wire ena
-    //     .wea(wea),      // input wire [0 : 0] wea
-    //     .addra(addra),  // input wire [3 : 0] addra
-    //     .dina(dina),    // input wire [255 : 0] dina
-    //     .douta(douta)  // output wire [255 : 0] douta
-    // );
+     SD_SIM sd(
+         .clka(clk),    // input wire clka
+         .ena(ena),      // input wire ena
+         .wea(wea),      // input wire [0 : 0] wea
+         .addra(addra),  // input wire [3 : 0] addra
+         .dina(dina),    // input wire [255 : 0] dina
+         .douta(douta)  // output wire [255 : 0] douta
+     );
     
     // Store hashed password
     reg [127:0] hPass;
@@ -53,10 +62,19 @@ module VADER(
         // Set all flags to 0
         bruteCounter <= 0;
         addra <= 0;
+        decrypt <= 0;
         state = 0;
         // Turn off LED
         led = 3'b000;
+        #60
         // input hashed password to be guessed. Example below
+        $display("DOUTA1: %s", douta);
+        data_in = douta;
+        addra = 1;
+        #60
+        $display("DOUTA2: %s", douta);
+        key_in = douta;
+        addra = 0; #60;
     end
     
     always @(posedge start) begin
@@ -64,6 +82,7 @@ module VADER(
             // Ensure that can only start once reset to wait state
             hPass <= douta;
             addra = 2;
+            #60
             state = 1;
         end
     end
@@ -73,6 +92,7 @@ module VADER(
     always @(posedge resState) begin
         bruteCounter <= 0;
         addra <= 0;
+        #60
         state = 0;
         // Turn off LED
         led = 3'b000;
@@ -87,10 +107,15 @@ module VADER(
         
         if (state == 1) begin
             // EXAMPLE DECRYPTION DUE TO ENCRYPTION NOT FINISHED AT THIS TIME
-            if (hPass == douta) begin
+            $display("I reached the decrypt stage.");
+            decrypt = 1;
+            #60
+            $display("DATA OUT: %s", data_out);
+            if ("Discombobulateme" == data_out) begin
                 state <= 4;
             end else begin
                 addra = 1; // Set address to whatever the first dictionary input is
+                #60
                 state = 2; // Change state to dictionary attack
             end
         end 
@@ -103,11 +128,13 @@ module VADER(
             // end
             
             addra <= addra + 1;
+            #60
             
             // End loop check
             // Give up on dictionary once all passwords have been attempted.
             if (addra - `dictionaryStart >= `dictionarySize) begin 
                 addra = 0;
+                #60
                 state = 3; // Proceed to brute force attack
             end
         end
