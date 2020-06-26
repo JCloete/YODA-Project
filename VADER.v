@@ -6,18 +6,18 @@
 
 module VADER(
     input clk, //100 MHz clock. 
-    input reset, // Reset button
-    input start, // Start button
+    input resetB, // Reset button
+    input startB, // Start button
     output reg [2:0]led, //RGB led (to be linked state in HW)
     output reg [2:0]state
     );
     // State (wait - 0/decrypt - 1/dictionary - 2/success - 3/failure - 4)
     
     //Internal variables
-    wire resState;	// Resets our system to the beginning
-    // Delayed_Res resetter(clk, reset, resState);
-    wire startState; // Starts our system once resetted
-    // Debounce Debounce(clk, start, startState);
+    wire reset;	// Resets our system to the beginning
+    Delayed_Res resetter(clk, resetB, reset);
+    wire start; // Starts our system once resetted
+    Debounce Debounce(clk, startB, start);
     
     // Variables to interface with encryption module
     reg [127:0]data_in;
