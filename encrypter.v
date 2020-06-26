@@ -226,11 +226,11 @@ module encrypter(
         reset_AES = 0;
     end
     
-    always @(posedge start) begin
+    /*always @(posedge start) begin
         e = data_input(data_in);
         e = key_input(key_in);
         start_AES = 1;
-    end
+    end*/
 
     always @(posedge reset_AES) begin
         sbox[  0] =  99; sbox[  1] = 124; sbox[  2] = 119; sbox[  3] = 123; sbox[  4] = 242; sbox[  5] = 107; sbox[  6] = 111; sbox[  7] = 197; 
@@ -302,7 +302,10 @@ module encrypter(
     end
 
     integer i;
-    always @(posedge start_AES) begin
+    always @(posedge start) begin
+        e = data_input(data_in);
+        e = key_input(key_in);
+        start_AES = 1;
         $display("START OF ENCRYPTER LOOP");   
         $display("-- KEY --");
         for (i = 0; i < 16; i = i + 1)

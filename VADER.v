@@ -8,10 +8,6 @@ module VADER(
     input clk, //100 MHz clock. 
     input reset, // Reset button
     input start, // Start button
-    //input btnR, //Left button
-    //input btnL, //Right button
-    //output wire [7:0]seg, //Seg display, to be linked with state (active low)
-    //output wire [7:0]segdriv, //Seg driv (active low)
     output reg [2:0]led, //RGB led (to be linked state in HW)
     output reg [2:0]state
     );
@@ -38,7 +34,6 @@ module VADER(
     reg wea = 0; // Not current writing anything
     reg [7:0] addra=0;
     reg [127:0] dina=0; //We're not putting data in, so we can leave this unassigned
-    //To-do: Alternate dina for BLOCK where we want to write data in
     wire [127:0] douta;
     
     //BRAM Blocks
@@ -73,7 +68,7 @@ module VADER(
         addra = 0; #60;
     end
     
-    always @(posedge start) begin
+    /*always @(posedge start) begin
         if (state == 0) begin // So we cant go back to decrypt state mid cracking attempt.
             // Ensure that can only start once reset to wait state
             hPass <= douta;
@@ -82,11 +77,11 @@ module VADER(
             state = 1;
             $display("Starting Decryption");
         end
-    end
+    end*/
     
 	// Resetting the system back to the beginning to allow for a different password
 	// to be guessed
-    always @(posedge resState) begin
+    /*always @(posedge resState) begin
         addra <= 0;
         #60
         state = 0;
@@ -95,72 +90,96 @@ module VADER(
         // reinput same or another hashed password to be guessed
         hPass <= douta;
         $display("Resetting ");
-    end
+    end*/
 
-    always @(posedge clk) begin
-        if (state == 0) begin // Check for wait status
-            led <= 3'b011; // Do wait stuff i.e Flash Yellow LED
-            $display("Waiting State 0 Reached");
+    always @(posedge clk or posedge reset or posedge start) begin
+        if (reset) begin
+            addra <= 0;
+            #60
+            state = 0;
+            // Turn off LED
+            led = 3'b000;
+            // reinput same or another hashed password to be guessed
+            hPass <= douta;
+            $display("Resetting ");
         end
         
-        if (state == 1) begin
-            // EXAMPLE DECRYPTION DUE TO ENCRYPTION NOT FINISHED AT THIS TIME
-            $display("Decryption State 1 Reached");
-            start_AES = 1;
-            #60;
-            start_AES = 0;
-            if ("Discombobulateme" == data_out) begin
-                $display("Decryption Sucess.");
-                state <= 3;
-            end else begin
-                $display("Decryption Failed.");
-                addra = `dictionaryStart; // Set address to whatever the first dictionary input is
+        else if (start) begin
+            if (state == 0) begin // So we cant go back to decrypt state mid cracking attempt.
+                // Ensure that can only start once reset to wait state
+                hPass <= douta;
+                addra = 2;
                 #60
-                state = 2; // Change state to dictionary attack
-                decrypt = 0;
+                state = 1;
+                $display("Starting Decryption");
             end
-        end 
-        
-        if (state == 2) begin
-            // Start dictionary attack
-            $display("Dictionary State 2 Reached");
-            data_in = douta;
-            start_AES = 1;
-            #60;
-            start_AES = 0;
-            $display("Encrypted Guess: %s", data_out);
-            $display("Hashed Password: %s", hPass);
-            // End loop check
-            // Give up on dictionary once all passwords have been attempted.
-            if (addra - `dictionaryStart >= `dictionarySize) begin 
-                $display("Dictionary Attack Failed.");
-                addra = 0;
-                #60;
-                state = 4; // Proceed to Failure State
-            end
-            else if (hPass == data_out) begin
-                $display("Dictionary Attack Succeeded.");
-                state = 3;
-                addra = 0;
-                #60;
-            end
-            else begin
-                addra <= addra + 1;
-                #60;
-            end            
-        end
-
-        // Check for ending conditions
-        if (state == 3) begin // Check for success state
-            led <= 3'b010; // Do Success state stuff. i.e Flash Green LED
-            $display("Success State: PW = Discombobulateme");
-            $finish;
         end
         
-        if (state == 4) begin // check for failure state
-            led <= 3'b001; // Do Failure state stuff. i.e Flash Red LED
-            $display("Failure State");
-            $finish;
+        else begin
+            if (state == 0) begin // Check for wait status
+                led <= 3'b011; // Do wait stuff i.e Flash Yellow LED
+                $display("Waiting State 0 Reached");
+            end
+            
+            if (state == 1) begin
+                // EXAMPLE DECRYPTION DUE TO ENCRYPTION NOT FINISHED AT THIS TIME
+                $display("Decryption State 1 Reached");
+                start_AES = 1;
+                #60;
+                start_AES = 0;
+                if ("Discombobulateme" == data_out) begin
+                    $display("Decryption Sucess.");
+                    state <= 3;
+                end else begin
+                    $display("Decryption Failed.");
+                    addra = `dictionaryStart; // Set address to whatever the first dictionary input is
+                    #60
+                    state = 2; // Change state to dictionary attack
+                    decrypt = 0;
+                end
+            end 
+            
+            if (state == 2) begin
+                // Start dictionary attack
+                $display("Dictionary State 2 Reached");
+                data_in = douta;
+                start_AES = 1;
+                #60;
+                start_AES = 0;
+                $display("Encrypted Guess: %s", data_out);
+                $display("Hashed Password: %s", hPass);
+                // End loop check
+                // Give up on dictionary once all passwords have been attempted.
+                if (addra - `dictionaryStart >= `dictionarySize) begin 
+                    $display("Dictionary Attack Failed.");
+                    addra = 0;
+                    #60;
+                    state = 4; // Proceed to Failure State
+                end
+                else if (hPass == data_out) begin
+                    $display("Dictionary Attack Succeeded.");
+                    state = 3;
+                    addra = 0;
+                    #60;
+                end
+                else begin
+                    addra <= addra + 1;
+                    #60;
+                end            
+            end
+    
+            // Check for ending conditions
+            if (state == 3) begin // Check for success state
+                led <= 3'b010; // Do Success state stuff. i.e Flash Green LED
+                $display("Success State: PW = Discombobulateme");
+                $finish;
+            end
+            
+            if (state == 4) begin // check for failure state
+                led <= 3'b001; // Do Failure state stuff. i.e Flash Red LED
+                $display("Failure State");
+                $finish;
+            end
         end
     end
 endmodule
