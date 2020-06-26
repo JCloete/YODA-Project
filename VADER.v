@@ -55,8 +55,8 @@ module VADER(
     // Store hashed password
     reg [127:0] hPass;
     
-    
     initial begin
+        $display("Initializing");
         // Set all flags to 0
         addra <= 0;
         start_AES <= 0;
@@ -80,6 +80,7 @@ module VADER(
             addra = 2;
             #60
             state = 1;
+            $display("Starting Decryption");
         end
     end
     
@@ -93,23 +94,26 @@ module VADER(
         led = 3'b000;
         // reinput same or another hashed password to be guessed
         hPass <= douta;
+        $display("Resetting ");
     end
 
     always @(posedge clk) begin
         if (state == 0) begin // Check for wait status
             led <= 3'b011; // Do wait stuff i.e Flash Yellow LED
+            $display("Waiting State 0 Reached");
         end
         
         if (state == 1) begin
             // EXAMPLE DECRYPTION DUE TO ENCRYPTION NOT FINISHED AT THIS TIME
-            $display("I reached the decryption stage.");
+            $display("Decryption State 1 Reached");
             start_AES = 1;
             #60;
             start_AES = 0;
-            $display("DATA OUT: %s", data_out);
             if ("Discombobulateme" == data_out) begin
+                $display("Decryption Sucess.");
                 state <= 3;
             end else begin
+                $display("Decryption Failed.");
                 addra = `dictionaryStart; // Set address to whatever the first dictionary input is
                 #60
                 state = 2; // Change state to dictionary attack
@@ -119,21 +123,23 @@ module VADER(
         
         if (state == 2) begin
             // Start dictionary attack
-            $display("I reached the dictionary stage.");
+            $display("Dictionary State 2 Reached");
             data_in = douta;
             start_AES = 1;
             #60;
             start_AES = 0;
-            $display("DATA OUT: %s", data_out);
-            $display("hPass: %s", hPass);
+            $display("Encrypted Guess: %s", data_out);
+            $display("Hashed Password: %s", hPass);
             // End loop check
             // Give up on dictionary once all passwords have been attempted.
             if (addra - `dictionaryStart >= `dictionarySize) begin 
+                $display("Dictionary Attack Failed.");
                 addra = 0;
                 #60;
                 state = 4; // Proceed to Failure State
             end
             else if (hPass == data_out) begin
+                $display("Dictionary Attack Succeeded.");
                 state = 3;
                 addra = 0;
                 #60;
@@ -147,10 +153,14 @@ module VADER(
         // Check for ending conditions
         if (state == 3) begin // Check for success state
             led <= 3'b010; // Do Success state stuff. i.e Flash Green LED
+            $display("Success State: PW = Discombobulateme");
+            $finish;
         end
         
         if (state == 4) begin // check for failure state
             led <= 3'b001; // Do Failure state stuff. i.e Flash Red LED
+            $display("Failure State");
+            $finish;
         end
     end
 endmodule

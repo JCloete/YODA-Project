@@ -311,7 +311,7 @@ module encrypter(
         end
         $write("\n");
         
-        $display("-- Password array Before --");
+        $display("-- Before encryption/decryption --");
         for (i = 0; i < 16; i = i + 1)
         begin
             $write("%c",arr[i]);
@@ -324,6 +324,13 @@ module encrypter(
         else begin
             d = crypt(0);
         end
+        
+        $display("-- After encryption/decryption --");
+        for (i = 0; i < 16; i = i + 1)
+        begin
+            $write("%c",arr[i]);
+        end
+        $write("\n");
         
         data_out = data_output(0);
         

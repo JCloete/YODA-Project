@@ -38,6 +38,7 @@ module TB_VADER();
     begin
         // $display("clock\treset\tstart\tled\tstate\tdone");
         // $monitor("%d\t%d\t%d\t%d\t%d\t%d",clk,reset,start, led, state, done);
+        $monitor("Start: %d | Reset: %d | State: %d |", start, reset, state);
         clk <= 0;
         reset <= 0;
         start <= 0;
