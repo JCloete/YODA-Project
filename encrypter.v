@@ -1,7 +1,8 @@
 module encrypter(
     input [127:0]data_in,
     input [127:0]key_in,
-    input decrypt,
+    input start,
+    input encrypt,
     output reg [127:0]data_out
 );
 // Control Registers
@@ -225,7 +226,7 @@ module encrypter(
         reset_AES = 0;
     end
     
-    always @(posedge decrypt) begin
+    always @(posedge start) begin
         e = data_input(data_in);
         e = key_input(key_in);
         start_AES = 1;
@@ -301,7 +302,8 @@ module encrypter(
     end
 
     integer i;
-    always @(posedge start_AES) begin   
+    always @(posedge start_AES) begin
+        $display("START OF ENCRYPTER LOOP");   
         $display("-- KEY --");
         for (i = 0; i < 16; i = i + 1)
         begin
@@ -316,24 +318,17 @@ module encrypter(
         end
         $write("\n");
         
-        d = crypt(1);
-        
-        $display("-- Password array --");
-        for (i = 0; i < 16; i = i + 1)
-        begin
-            $write("%c",arr[i]);
+        if (encrypt) begin
+            d = crypt(1);
+        end 
+        else begin
+            d = crypt(0);
         end
         
         data_out = data_output(0);
         
-        $write("\n");
         start_AES = 0;
         reset_AES = 1;
-        // if crypt(1) we expect:
-        // 68 105 115  99
-        // 111 109  98 111
-        // 98 117 108  97
-        // 116 101 109 101
     end
     // ----------          ----- ----    -----    ---- -----         ----------//
 endmodule

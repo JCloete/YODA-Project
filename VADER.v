@@ -1,9 +1,8 @@
 `timescale 1ns / 1ps
 
 // defines for system parameters
-`define dictionarySize 3
-`define dictionaryStart 1
-`define bruteAttempts 10
+`define dictionarySize 4
+`define dictionaryStart 3
 
 module VADER(
     input clk, //100 MHz clock. 
@@ -16,7 +15,7 @@ module VADER(
     output reg [2:0]led, //RGB led (to be linked state in HW)
     output reg [2:0]state
     );
-    // State (wait - 0/decrypt - 1/dictionary - 2/brute - 3/success - 4/failure - 5)
+    // State (wait - 0/decrypt - 1/dictionary - 2/success - 3/failure - 4)
     
     //Internal variables
     wire resState;	// Resets our system to the beginning
@@ -27,11 +26,12 @@ module VADER(
     // Variables to interface with encryption module
     reg [127:0]data_in;
     reg [127:0]key_in;
+    reg start_AES;
     reg decrypt;
     wire [127:0]data_out;
     
     // Instantiate the encrypter module
-    encrypter encrypter(data_in, key_in, decrypt, data_out);
+    encrypter encrypter(data_in, key_in, start_AES, decrypt, data_out);
     
     // Memory IO
     reg ena = 1; // Enable reading memory
@@ -55,24 +55,20 @@ module VADER(
     // Store hashed password
     reg [127:0] hPass;
     
-    // Keep track of brute attempts
-    reg [31:0] bruteCounter;
     
     initial begin
         // Set all flags to 0
-        bruteCounter <= 0;
         addra <= 0;
-        decrypt <= 0;
+        start_AES <= 0;
+        decrypt <= 1; // Set this to 1 because the first operation is a decryption operation
         state = 0;
         // Turn off LED
         led = 3'b000;
         #60
         // input hashed password to be guessed. Example below
-        $display("DOUTA1: %s", douta);
         data_in = douta;
         addra = 1;
         #60
-        $display("DOUTA2: %s", douta);
         key_in = douta;
         addra = 0; #60;
     end
@@ -90,7 +86,6 @@ module VADER(
 	// Resetting the system back to the beginning to allow for a different password
 	// to be guessed
     always @(posedge resState) begin
-        bruteCounter <= 0;
         addra <= 0;
         #60
         state = 0;
@@ -107,60 +102,54 @@ module VADER(
         
         if (state == 1) begin
             // EXAMPLE DECRYPTION DUE TO ENCRYPTION NOT FINISHED AT THIS TIME
-            $display("I reached the decrypt stage.");
-            decrypt = 1;
-            #60
+            $display("I reached the decryption stage.");
+            start_AES = 1;
+            #60;
+            start_AES = 0;
             $display("DATA OUT: %s", data_out);
             if ("Discombobulateme" == data_out) begin
-                state <= 4;
+                state <= 3;
             end else begin
-                addra = 1; // Set address to whatever the first dictionary input is
+                addra = `dictionaryStart; // Set address to whatever the first dictionary input is
                 #60
                 state = 2; // Change state to dictionary attack
+                decrypt = 0;
             end
         end 
         
         if (state == 2) begin
             // Start dictionary attack
-            // if (hPass == encrypt(douta) begin
-            //      success <= 1;
-            //      dictionary <= 0;
-            // end
-            
-            addra <= addra + 1;
-            #60
-            
+            $display("I reached the dictionary stage.");
+            data_in = douta;
+            start_AES = 1;
+            #60;
+            start_AES = 0;
+            $display("DATA OUT: %s", data_out);
+            $display("hPass: %s", hPass);
             // End loop check
             // Give up on dictionary once all passwords have been attempted.
             if (addra - `dictionaryStart >= `dictionarySize) begin 
                 addra = 0;
-                #60
-                state = 3; // Proceed to brute force attack
+                #60;
+                state = 4; // Proceed to Failure State
             end
-        end
-        
-        if (state == 3) begin
-            // Start brute force method
-            // if (hPass == encrypt(bruteGen()) begin
-            //      success <= 1;
-            //      brute <= 0;
-            // end
-            
-            bruteCounter <= bruteCounter + 1;
-            
-            // End Loop Check
-            // Give up on brute force once a certain amount of tries have elapsed.
-            if (bruteCounter >= `bruteAttempts) begin 
-                state = 5;
+            else if (hPass == data_out) begin
+                state = 3;
+                addra = 0;
+                #60;
             end
+            else begin
+                addra <= addra + 1;
+                #60;
+            end            
         end
-        
+
         // Check for ending conditions
-        if (state == 4) begin // Check for success state
+        if (state == 3) begin // Check for success state
             led <= 3'b010; // Do Success state stuff. i.e Flash Green LED
         end
         
-        if (state == 5) begin // check for failure state
+        if (state == 4) begin // check for failure state
             led <= 3'b001; // Do Failure state stuff. i.e Flash Red LED
         end
     end
